@@ -1,8 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>net472</TargetFramework>
 		<LangVersion>7.3</LangVersion>
 	</PropertyGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\RefactorThis.Domain\RefactorThis.Domain.csproj">
+		<Name>RefactorThis.Domain</Name>
+		</ProjectReference>
+	</ItemGroup>
+	
 
 </Project>
