@@ -26,95 +26,81 @@ namespace RefactorThis.Application
                 return HandleZeroAmountInvoice(invoice);
 
             if (invoice.Payments != null && invoice.Payments.Any())
-                return await HandleExistingPayments(invoice, payment);
+                return await HandleExistingPaymentsAsync(invoice, payment);
 
-            return await HandleNewPayment(invoice, payment);
+            return await HandleNewPaymentAsync(invoice, payment);
         }
 
         private string HandleZeroAmountInvoice(Invoice invoice)
         {
             if (invoice.Payments == null || !invoice.Payments.Any())
-            {
                 return "No payment needed.";
-            }
 
             throw new InvalidOperationException("The invoice is in an invalid state, it has an amount of 0 and it has payments.");
         }
 
-        private async Task<string> HandleExistingPayments(Invoice invoice, Payment payment)
+        private async Task<string> HandleExistingPaymentsAsync(Invoice invoice, Payment payment)
         {
             var totalPaid = invoice.Payments.Sum(x => x.Amount);
 
             if (totalPaid != 0)
             {
                 if (totalPaid == invoice.Amount)
-                {
                     return "Invoice was already fully paid.";
-                }
 
                 if (payment.Amount > (invoice.Amount - invoice.AmountPaid))
-                {
                     return "The payment is greater than the partial amount remaining.";
-                }
             }
 
-            return await ProcessPartialOrFinalPayment(invoice, payment);
+            return await ProcessPartialOrFinalPaymentAsync(invoice, payment);
         }
 
-        private async Task<string> ProcessPartialOrFinalPayment(Invoice invoice, Payment payment)
+        private async Task<string> ProcessPartialOrFinalPaymentAsync(Invoice invoice, Payment payment)
         {
             if ((invoice.Amount - invoice.AmountPaid) == payment.Amount)
             {
-                return await ProcessFinalPayment(invoice, payment);
+                return await ProcessFinalPaymentAsync(invoice, payment);
             }
 
-            return await ProcessPartialPayment(invoice, payment, false);
+            return await ProcessPartialPaymentAsync(invoice, payment, false);
         }
 
-        private async Task<string> ProcessFinalPayment(Invoice invoice, Payment payment)
+        private async Task<string> ProcessFinalPaymentAsync(Invoice invoice, Payment payment)
         {
-            await UpdateInvoice(invoice, payment, true);
+            await UpdateInvoicePaymentAsync(invoice, payment);
             return "Final partial payment received, invoice is now fully paid.";
         }
 
-        private async Task<string> ProcessPartialPayment(Invoice invoice, Payment payment, bool isInitialPayment)
+        private async Task<string> ProcessPartialPaymentAsync(Invoice invoice, Payment payment, bool isInitialPayment)
         {
-            await UpdateInvoice(invoice, payment, false);
+            await UpdateInvoicePaymentAsync(invoice, payment);
             if (isInitialPayment)
-            {
                 return "Invoice is now partially paid.";
-            }
+
             return "Another partial payment received, still not fully paid.";
         }
 
-        private async Task UpdateInvoice(Invoice invoice, Payment payment, bool isFinalPayment)
+        private async Task UpdateInvoicePaymentAsync(Invoice invoice, Payment payment)
         {
             invoice.AmountPaid += payment.Amount;
 
             if (invoice.Type == InvoiceType.Commercial)
-            {
                 invoice.TaxAmount += payment.Amount * TaxRate;
-            }
 
             invoice.Payments.Add(payment);
 
             await _invoiceRepository.UpdateInvoiceAsync(invoice);
         }
 
-        private async Task<string> HandleNewPayment(Invoice invoice, Payment payment)
+        private async Task<string> HandleNewPaymentAsync(Invoice invoice, Payment payment)
         {
             if (payment.Amount > invoice.Amount)
-            {
                 return "The payment is greater than the invoice amount.";
-            }
 
             if (payment.Amount == invoice.Amount)
-            {
-                return await ProcessFinalPayment(invoice, payment);
-            }
+                return await ProcessFinalPaymentAsync(invoice, payment);
 
-            return await ProcessPartialPayment(invoice, payment, true);
+            return await ProcessPartialPaymentAsync(invoice, payment, true);
         }
-
     }
 }
