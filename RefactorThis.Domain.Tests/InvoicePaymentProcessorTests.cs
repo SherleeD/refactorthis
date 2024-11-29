@@ -1,9 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using NUnit.Framework;
-using RefactorThis.Persistence;
-using RefactorThis.Domain.Core;
+﻿using NUnit.Framework;
 using RefactorThis.Application;
+using RefactorThis.Domain.Core;
+using RefactorThis.Persistence;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace RefactorThis.Domain.Tests
 {
@@ -11,22 +12,16 @@ namespace RefactorThis.Domain.Tests
     public class InvoicePaymentProcessorTests
     {
         [Test]
-        public void ProcessPayment_Should_ThrowException_When_NoInvoiceFoundForPaymentReference()
+        public async Task ProcessPayment_Should_ThrowException_When_NoInvoiceFoundForPaymentReferenceAsync()
         {
             var repo = new InvoiceRepository();
-
-            //Invoice invoice = null;
-
-            //var paymentProcessor = new InvoiceService(repo);
-
             var paymentProcessor = new InvoiceService(repo);
-
             var payment = new Payment();
             var failureMessage = "";
 
             try
             {
-                var result = paymentProcessor.ProcessPayment(payment);
+                var result = await paymentProcessor.ProcessPaymentAsync(payment);
             }
             catch (InvalidOperationException e)
             {
@@ -37,11 +32,9 @@ namespace RefactorThis.Domain.Tests
         }
 
         [Test]
-        public void ProcessPayment_Should_ReturnFailureMessage_When_NoPaymentNeeded()
+        public async Task ProcessPayment_Should_ReturnFailureMessage_When_NoPaymentNeededAsync()
         {
             var repo = new InvoiceRepository();
-            //var invoice = new Invoice(repo)
-
             var invoice = new Invoice
             {
                 Amount = 0,
@@ -49,23 +42,19 @@ namespace RefactorThis.Domain.Tests
                 Payments = null
             };
 
-            repo.AddInvoice(invoice);
+            invoice.Id = await repo.CreateInvoiceAsync(invoice);
 
             var paymentProcessor = new InvoiceService(repo);
-
             var payment = new Payment();
-
-            var result = paymentProcessor.ProcessPayment(payment);
+            var result = await paymentProcessor.ProcessPaymentAsync(payment);
 
             Assert.AreEqual("No payment needed.", result);
         }
 
         [Test]
-        public void ProcessPayment_Should_ReturnFailureMessage_When_InvoiceAlreadyFullyPaid()
+        public async Task ProcessPayment_Should_ReturnFailureMessage_When_InvoiceAlreadyFullyPaidAsync()
         {
             var repo = new InvoiceRepository();
-
-            //var invoice = new Invoice(repo)
             var invoice = new Invoice
             {
                 Amount = 10,
@@ -78,19 +67,17 @@ namespace RefactorThis.Domain.Tests
                     }
                 }
             };
-            repo.AddInvoice(invoice);
+            invoice.Id = await repo.CreateInvoiceAsync(invoice);
 
             var paymentProcessor = new InvoiceService(repo);
-
             var payment = new Payment();
-
-            var result = paymentProcessor.ProcessPayment(payment);
+            var result = await paymentProcessor.ProcessPaymentAsync(payment);
 
             Assert.AreEqual("Invoice was already fully paid.", result);
         }
 
         [Test]
-        public void ProcessPayment_Should_ReturnFailureMessage_When_PartialPaymentExistsAndAmountPaidExceedsAmountDue()
+        public async Task ProcessPayment_Should_ReturnFailureMessage_When_PartialPaymentExistsAndAmountPaidExceedsAmountDueAsync()
         {
             var repo = new InvoiceRepository();
             var invoice = new Invoice
@@ -105,22 +92,21 @@ namespace RefactorThis.Domain.Tests
                     }
                 }
             };
-            repo.AddInvoice(invoice);
+            invoice.Id = await repo.CreateInvoiceAsync(invoice);
 
             var paymentProcessor = new InvoiceService(repo);
-
             var payment = new Payment()
             {
-                Amount = 6
+                Amount = 6,
+                Reference = "PAYREF01"
             };
-
-            var result = paymentProcessor.ProcessPayment(payment);
+            var result = await paymentProcessor.ProcessPaymentAsync(payment);
 
             Assert.AreEqual("The payment is greater than the partial amount remaining.", result);
         }
 
         [Test]
-        public void ProcessPayment_Should_ReturnFailureMessage_When_NoPartialPaymentExistsAndAmountPaidExceedsInvoiceAmount()
+        public async Task ProcessPayment_Should_ReturnFailureMessage_When_NoPartialPaymentExistsAndAmountPaidExceedsInvoiceAmountAsync()
         {
             var repo = new InvoiceRepository();
             var invoice = new Invoice
@@ -129,22 +115,22 @@ namespace RefactorThis.Domain.Tests
                 AmountPaid = 0,
                 Payments = new List<Payment>()
             };
-            repo.AddInvoice(invoice);
+
+            invoice.Id = await repo.CreateInvoiceAsync(invoice);
 
             var paymentProcessor = new InvoiceService(repo);
-
             var payment = new Payment()
             {
-                Amount = 6
+                Amount = 6,
+                Reference = "PAYREF02"
             };
-
-            var result = paymentProcessor.ProcessPayment(payment);
+            var result = await paymentProcessor.ProcessPaymentAsync(payment);
 
             Assert.AreEqual("The payment is greater than the invoice amount.", result);
         }
 
         [Test]
-        public void ProcessPayment_Should_ReturnFullyPaidMessage_When_PartialPaymentExistsAndAmountPaidEqualsAmountDue()
+        public async Task ProcessPayment_Should_ReturnFullyPaidMessage_When_PartialPaymentExistsAndAmountPaidEqualsAmountDueAsync()
         {
             var repo = new InvoiceRepository();
             var invoice = new Invoice
@@ -159,46 +145,44 @@ namespace RefactorThis.Domain.Tests
                     }
                 }
             };
-            repo.AddInvoice(invoice);
+            invoice.Id = await repo.CreateInvoiceAsync(invoice);
 
             var paymentProcessor = new InvoiceService(repo);
-
             var payment = new Payment()
             {
-                Amount = 5
+                Amount = 5,
+                Reference = "PAYREF03"
             };
-
-            var result = paymentProcessor.ProcessPayment(payment);
+            var result = await paymentProcessor.ProcessPaymentAsync(payment);
 
             Assert.AreEqual("Final partial payment received, invoice is now fully paid.", result);
         }
 
         [Test]
-        public void ProcessPayment_Should_ReturnFullyPaidMessage_When_NoPartialPaymentExistsAndAmountPaidEqualsInvoiceAmount()
+        public async Task ProcessPayment_Should_ReturnFullyPaidMessage_When_NoPartialPaymentExistsAndAmountPaidEqualsInvoiceAmountAsync()
         {
             var repo = new InvoiceRepository();
             var invoice = new Invoice
             {
                 Amount = 10,
                 AmountPaid = 0,
-                Payments = new List<Payment>() { new Payment() { Amount = 10 } }
+                Payments = new List<Payment>() { new Payment() { Amount = 10, Reference = "PAYREF04" } }
             };
-            repo.AddInvoice(invoice);
+            invoice.Id = await repo.CreateInvoiceAsync(invoice);
 
             var paymentProcessor = new InvoiceService(repo);
-
             var payment = new Payment()
             {
-                Amount = 10
+                Amount = 10,
+                Reference = "PAYREF05"
             };
-
-            var result = paymentProcessor.ProcessPayment(payment);
+            var result = await paymentProcessor.ProcessPaymentAsync(payment);
 
             Assert.AreEqual("Invoice was already fully paid.", result);
         }
 
         [Test]
-        public void ProcessPayment_Should_ReturnPartiallyPaidMessage_When_PartialPaymentExistsAndAmountPaidIsLessThanAmountDue()
+        public async Task ProcessPayment_Should_ReturnPartiallyPaidMessage_When_PartialPaymentExistsAndAmountPaidIsLessThanAmountDueAsync()
         {
             var repo = new InvoiceRepository();
             var invoice = new Invoice
@@ -213,40 +197,39 @@ namespace RefactorThis.Domain.Tests
                     }
                 }
             };
-            repo.AddInvoice(invoice);
+            invoice.Id = await repo.CreateInvoiceAsync(invoice);
 
             var paymentProcessor = new InvoiceService(repo);
-
             var payment = new Payment()
             {
-                Amount = 1
+                Amount = 1,
+                Reference = "PAYREF06"
             };
-
-            var result = paymentProcessor.ProcessPayment(payment);
+            var result = await paymentProcessor.ProcessPaymentAsync(payment);
 
             Assert.AreEqual("Another partial payment received, still not fully paid.", result);
         }
 
         [Test]
-        public void ProcessPayment_Should_ReturnPartiallyPaidMessage_When_NoPartialPaymentExistsAndAmountPaidIsLessThanInvoiceAmount()
+        public async Task ProcessPayment_Should_ReturnPartiallyPaidMessage_When_NoPartialPaymentExistsAndAmountPaidIsLessThanInvoiceAmountAsync()
         {
             var repo = new InvoiceRepository();
             var invoice = new Invoice
             {
                 Amount = 10,
                 AmountPaid = 0,
-                Payments = new List<Payment>()
+                Payments = new List<Payment>(),
+                Type = Enums.InvoiceType.Commercial
             };
-            repo.AddInvoice(invoice);
+            invoice.Id = await repo.CreateInvoiceAsync(invoice);
 
             var paymentProcessor = new InvoiceService(repo);
-
             var payment = new Payment()
             {
-                Amount = 1
+                Amount = 1,
+                Reference = "PAYREF07"
             };
-
-            var result = paymentProcessor.ProcessPayment(payment);
+            var result = await paymentProcessor.ProcessPaymentAsync(payment);
 
             Assert.AreEqual("Invoice is now partially paid.", result);
         }

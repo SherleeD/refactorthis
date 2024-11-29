@@ -1,5 +1,6 @@
 using RefactorThis.Domain.Core;
 using System;
+using System.Threading.Tasks;
 
 namespace RefactorThis.Persistence
 {
@@ -7,26 +8,28 @@ namespace RefactorThis.Persistence
     {
         private Invoice _invoice;
 
+        public Task<int> CreateInvoiceAsync(Invoice invoice)
+        {
+            _invoice = invoice ?? throw new ArgumentNullException(nameof(invoice));
+
+            return Task.FromResult(invoice.Id); 
+        }
+
+        public Task<bool> UpdateInvoiceAsync(Invoice invoice)
+        {
+            _invoice = invoice ?? throw new ArgumentNullException(nameof(invoice));
+            return Task.FromResult(true);
+        }
+
         public Invoice GetInvoice(string reference)
         {
             return _invoice;
         }
 
-        public void SaveInvoice(Invoice invoice)
+        public Task<Invoice> GetInvoiceAsync(string reference)
         {
-            //saves the invoice to the database
-            if (invoice == null)
-                throw new ArgumentNullException(nameof(invoice));
-
-            _invoice = invoice;
-        }
-
-        public void AddInvoice(Invoice invoice)
-        {
-            if (invoice == null)
-                throw new ArgumentNullException(nameof(invoice));
-
-            _invoice = invoice;
+         
+            return Task.FromResult(_invoice);
         }
     }
 }
