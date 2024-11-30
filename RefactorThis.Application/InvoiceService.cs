@@ -9,10 +9,10 @@ namespace RefactorThis.Application
 {
     public class InvoiceService
     {
-        private readonly InvoiceRepository _invoiceRepository;
+        private readonly IInvoiceRepository _invoiceRepository;
         private const decimal TaxRate = 0.14m;
 
-        public InvoiceService(InvoiceRepository invoiceRepository)
+        public InvoiceService(IInvoiceRepository invoiceRepository)
         {
             _invoiceRepository = invoiceRepository;
         }
@@ -58,9 +58,7 @@ namespace RefactorThis.Application
         private async Task<string> ProcessPartialOrFinalPaymentAsync(Invoice invoice, Payment payment)
         {
             if ((invoice.Amount - invoice.AmountPaid) == payment.Amount)
-            {
                 return await ProcessFinalPaymentAsync(invoice, payment);
-            }
 
             return await ProcessPartialPaymentAsync(invoice, payment, false);
         }
